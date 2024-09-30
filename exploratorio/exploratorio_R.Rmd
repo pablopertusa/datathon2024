@@ -1,0 +1,145 @@
+---
+title: "exploratorio_r"
+author: "Pablo Pertusa"
+date: "2024-09-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if (!require("FactoMineR")) {
+  install.packages("FactoMineR")
+}
+library("FactoMineR")
+
+if (!require("factoextra")) {
+  install.packages("factoextra")
+}
+library("factoextra")
+
+if (!require("knitr")) {
+  install.packages("knitr")
+}
+library("knitr")
+```
+
+# Análisis exploratorio
+
+## Carga de los datos
+
+```{r}
+df = read.csv("dataframe_exploratorio.csv")
+```
+
+## PCA
+
+Para el Análisis en Componentes Principales necesitamos que todos los datos sean numéricos, y ya que esto se trata de un análisis exploratorio y disponemos de suficientes observaciones, vamos a eliminar 
+
+```{r}
+df_num <- as.data.frame(lapply(df, function(col) as.numeric(as.character(col))))
+
+df_filas_numericas <- df_num[complete.cases(df_num), ]
+```
+
+
+Creamos el Análisis en Componentes Principales.
+
+```{r}
+K = 10
+pca = PCA(df_filas_numericas, scale.unit = TRUE, graph = FALSE, ncp = K, quanti.sup = c("linea.1", "linea.2", "linea.3", "Orden.en.el.encadenado"))
+```
+
+
+```{r}
+eig.val = get_eigenvalue(pca)
+VPmedio = 100 * (1/nrow(eig.val))
+fviz_eig(pca, addlabels = TRUE) +
+  geom_hline(yintercept=VPmedio, linetype=2, color="red")
+```
+
+```{r}
+kable(eig.val)
+```
+
+
+
+Como primera impresión, podemos ver que las variables no tienen una gran dependencia unas con otras ya que hacen falta bastantes componentes para conseguir explicar una alta varianza de los datos. Escogeremos 4 dimensiones.
+
+```{r}
+K = 4
+pca = PCA(df_filas_numericas, scale.unit = TRUE, graph = FALSE, ncp = K, quanti.sup = c("Lote", "linea.1", "linea.2", "linea.3", "Orden.en.el.encadenado"))
+```
+
+
+
+```{r}
+eig.val = get_eigenvalue(pca)
+misScores = pca$ind$coord[,1:K]
+miT2 = colSums(t(misScores**2)/eig.val[1:K,1])
+I = nrow(df_filas_numericas)
+F95 = K*(I**2 - 1)/(I*(I - K)) * qf(0.95, K, I-K)
+F99 = K*(I**2 - 1)/(I*(I - K)) * qf(0.99, K, I-K)
+
+plot(1:length(miT2), miT2, type = "p", xlab = "Observaciones", ylab = "T2")
+abline(h = F95, col = "orange", lty = 2, lwd = 2)
+abline(h = F99, col = "red3", lty = 2, lwd = 2)
+```
+
+Hay una cantidad razonable de anómalos, vamos a ver cuáles son los lotes anómalos y más tarde entenderemos qué los hace tan diferentes.
+
+```{r}
+anomalos99 = df[which(miT2 > F99),]
+anomalos99
+```
+
+Vamos a ver los loading plots para visualizar el peso de cada una de las variables en cada una de las componentes, para así más tarde poder comprender la información que ofrecen los score plots, los cuales representan las coordenadas de las observaciones sobre las variables latentes.
+
+
+```{r}
+fviz_pca_var(pca, axes = c(1,2), repel = TRUE, col.var = "contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"))
+```
+
+```{r}
+fviz_pca_var(pca, axes = c(3,4), repel = TRUE, col.var = "contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"))
+```
+
+```{r}
+fviz_contrib(pca, choice = "var", axes = 1)
+```
+
+```{r}
+fviz_contrib(pca, choice = "var", axes = 2)
+```
+
+```{r}
+fviz_contrib(pca, choice = "var", axes = 3)
+```
+
+```{r}
+fviz_contrib(pca, choice = "var", axes = 4)
+```
+
+```{r}
+fviz_pca_ind(pca, axes = c(1,2), geom = c("point"), habillage = factor(df_filas_numericas["Producto.1"] > mean(df_filas_numericas$Producto.1))) +
+  tune::coord_obs_pred()
+
+fviz_pca_ind(pca, axes = c(3,4), geom = c("point"), habillage = factor(df_filas_numericas["Producto.1"] > mean(df_filas_numericas$Producto.1))) +
+  tune::coord_obs_pred()
+```
+* queda por ver si el orden en el encadenado afecta algo en producto 1*
+
+
+```{r}
+fviz_pca_ind(pca, axes = c(1,2), geom = c("point"), habillage = "Orden.en.el.encadenado") +
+  tune::coord_obs_pred()
+
+fviz_pca_ind(pca, axes = c(3,4), geom = c("point"), habillage = "Orden.en.el.encadenado") +
+  tune::coord_obs_pred()
+```
+
+
+
+
+
