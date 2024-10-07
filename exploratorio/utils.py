@@ -22,7 +22,7 @@ def encontrar_subdataset_entre_fechas(df: pd.DataFrame, fecha_inicio: str, fecha
     return df[col_bool]
 
 
-def buscar_registros_biorreactor(df_biorreactores: pd.DataFrame, fecha_inicio: str, fecha_fin: str) -> list:
+def buscar_registros(df_biorreactores: pd.DataFrame, fecha_inicio: str, fecha_fin: str) -> list:
     resul = []
     subdataset = encontrar_subdataset_entre_fechas(df_biorreactores, fecha_inicio, fecha_fin)
     cols = list(subdataset.columns)[1:] # quitamos la columna DateTime porque no nos interesa
@@ -33,14 +33,39 @@ def buscar_registros_biorreactor(df_biorreactores: pd.DataFrame, fecha_inicio: s
         resul.append(insert)
     return resul
 
-def buscar_registros_biorreactor_por_id(info: dict, biorreactor: int, fecha_inicio: str, fecha_fin: str, n_registros: int) -> list:
+def buscar_registros_biorreactor(info: dict, biorreactor: int, fecha_inicio: str, fecha_fin: str, n_registros: int) -> list:
     df_bio = info['biorreactores'][str(biorreactor)]
-    resul = buscar_registros_biorreactor(df_bio, fecha_inicio, fecha_fin)
+    resul = buscar_registros(df_bio, fecha_inicio, fecha_fin)
     if len(resul) > n_registros:
         raise ValueError('El subdataset contiene demasiados registros') # n_registros es el número máximo de registros que puede tener un lote, es decir, el tiempo máximo que ha estado cualquier lote en un reactor
     
     añadir_ceros = n_registros - len(resul)
     for i in range(añadir_ceros):
         resul.append(list(np.zeros(len(df_bio.columns)-1)))
+    
+    return resul
+
+def buscar_registros_centrifuga(info: dict, centrifuga: int, fecha_inicio: str, fecha_fin: str, n_registros: int) -> list:
+    df_centrifuga = info['centrifugas'][str(centrifuga)]
+    resul = buscar_registros(df_centrifuga, fecha_inicio, fecha_fin)
+    if len(resul) > n_registros:
+        raise ValueError('El subdataset contiene demasiados registros') # n_registros es el número máximo de registros que puede tener un lote, es decir, el tiempo máximo que ha estado cualquier lote en un reactor
+    
+    añadir_ceros = n_registros - len(resul)
+    for i in range(añadir_ceros):
+        resul.append(list(np.zeros(len(df_centrifuga.columns)-1)))
+    
+    return resul
+
+
+def buscar_registros_temperaturas(info: dict, fecha_inicio: str, fecha_fin: str, n_registros: int) -> list:
+    df_temperaturas = info['Temperaturas y humedades']
+    resul = buscar_registros(df_temperaturas, fecha_inicio, fecha_fin)
+    if len(resul) > n_registros:
+        raise ValueError('El subdataset contiene demasiados registros') # n_registros es el número máximo de registros que puede tener un lote, es decir, el tiempo máximo que ha estado cualquier lote en un reactor
+    
+    añadir_ceros = n_registros - len(resul)
+    for i in range(añadir_ceros):
+        resul.append(list(np.zeros(len(df_temperaturas.columns)-1)))
     
     return resul
