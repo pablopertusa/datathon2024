@@ -89,9 +89,24 @@ def buscar_registros_centrifuga(info: dict, centrifuga: int, fecha_inicio: str, 
     return resul
 
 
+def buscar_temperaturas(df: pd.DataFrame, fecha_inicio: str, fecha_fin: str) -> list:
+    resul = []
+    subdataset = encontrar_subdataset_entre_fechas(df, fecha_inicio, fecha_fin, True)
+    if subdataset is None:
+        return
+    cols = subdataset.columns[1:]
+    for _, row in subdataset.iterrows():
+        insert = []
+        for col in cols:
+            insert.append(row[col])
+        resul.append(insert)
+    return resul
+
 def buscar_registros_temperaturas(info: dict, fecha_inicio: str, fecha_fin: str, n_registros: int) -> list:
     df_temperaturas = info['Temperaturas y humedades']
-    resul = buscar_registros(df_temperaturas, fecha_inicio, fecha_fin)
+    resul = buscar_temperaturas(df_temperaturas, fecha_inicio, fecha_fin)
+    if resul is None:
+        return
     if len(resul) > n_registros:
         raise ValueError('El subdataset contiene demasiados registros') # n_registros es el número máximo de registros que puede tener un lote, es decir, el tiempo máximo que ha estado cualquier lote en un reactor
     
